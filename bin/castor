@@ -1,0 +1,65 @@
+#!/bin/sh
+
+# --- Cleanup Function and Trap ---
+
+# This function is called when the script exits, to ensure temporary files are cleaned up.
+cleanup() {
+    # Remove the symlink if it exists and is a symlink.
+    if [ -L "./GEMINI.md" ]; then
+        rm "./GEMINI.md"
+    fi
+
+    # Restore the original file if a backup was made.
+    if [ -f "./GEMINI.md.bak" ]; then
+        mv "./GEMINI.md.bak" "./GEMINI.md"
+    fi
+}
+
+# Set the trap to call the cleanup function on script exit (0), interrupt (2), or termination (15).
+trap 'cleanup' 0 2 15
+
+# --- Configuration and Path Setup ---
+
+# Check if the CASTOR_GEMS_DIR environment variable is set.
+if [ -z "${CASTOR_GEMS_DIR}" ]; then
+    echo "FAILED: CASTOR_GEMS_DIR environment variable is not set." >&2
+    echo "Please set it to the directory containing your gem files." >&2
+    exit 1
+fi
+
+GEMS_DIR="${CASTOR_GEMS_DIR}"
+
+# Determine which gem to use. Default to 'default'.
+GEM_NAME="${1:-default}"
+GEM_FILE="${GEMS_DIR}/${GEM_NAME}.md"
+
+# Define the command to be executed. Use CASTOR_GEMINI_COMMAND if set, otherwise default to "gemini -s".
+COMMAND_TO_RUN=${CASTOR_GEMINI_COMMAND:-"gemini -s"}
+
+# --- Pre-flight Checks ---
+
+# Check if the selected gem file actually exists.
+if [ ! -f "${GEM_FILE}" ]; then
+    echo "FAILED: Gem file not found: ${GEM_FILE}" >&2
+    exit 1
+fi
+
+# Check if a backup file already exists to prevent accidental overwriting.
+if [ -f "./GEMINI.md.bak" ]; then
+    echo "FAILED: GEMINI.md.bak already exists. Please remove it first." >&2
+    exit 1
+fi
+
+# --- Main Execution ---
+
+# If a GEMINI.md file exists in the current directory, back it up.
+if [ -f "./GEMINI.md" ]; then
+    mv "./GEMINI.md" "./GEMINI.md.bak"
+fi
+
+# Create a symlink in the current directory, pointing to the chosen gem file.
+# This makes the gem file available to the 'gemini' command.
+ln -s "${GEM_FILE}" "./GEMINI.md"
+
+# Run the main command.
+sh -c "$COMMAND_TO_RUN"

@@ -1,0 +1,23 @@
+#compdef castor
+
+_castor() {
+    local -a gems
+
+    # Ensure the CASTOR_GEMS_DIR is set.
+    if [[ -z "$CASTOR_GEMS_DIR" ]]; then
+        # You might want to add a message here, but typically completion functions fail silently.
+        return 1
+    fi
+
+    # Create an array of gem names by listing .md files and removing the extension.
+    # The `N` glob qualifier makes the pattern return nothing if no matches are found.
+    # The `.` glob qualifier restricts matches to regular files.
+    # The `:t` modifier extracts the tail (filename) and `:r` removes the extension.
+    gems=("${CASTOR_GEMS_DIR}"/*.md(N.:t:r))
+
+    # Provide the list of gems as completion candidates.
+    _describe 'gems' gems
+}
+
+# This will associate the _castor function with the castor command.
+_castor "$@"
